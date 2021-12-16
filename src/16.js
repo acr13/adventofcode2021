@@ -5,6 +5,9 @@ function hex2bin(hex) { return (parseInt(hex, 16).toString(2)).padStart(4, '0');
 // const input = '9C0141080250320F1802104A08'.split('').map(hex2bin).join('');
 const input = fs.readFileSync('./src/inputs/16.txt', 'UTF-8').split('').map(hex2bin).join('');
 
+// assume we are given a binary string, keep reading until we reach the
+// 'end' group (a group is 5 chars, end is a group that starts with 0)
+// also keep track of the length so we can trim this string later
 const parseLiteral = (literal) => {
   let binaryNumber = '';
   let done = false;
@@ -27,8 +30,6 @@ const parseLiteral = (literal) => {
 };
 
 const parsePacket = (binary) => {
-  // console.log('parsing', binary);
-  
   const parsed = {};
   parsed.version = parseInt(binary.substring(0, 3), 2);
   parsed.type = parseInt(binary.substring(3, 6), 2);
@@ -42,8 +43,8 @@ const parsePacket = (binary) => {
     parsed.value = parseInt(literal, 2);
   } else {
     parsed.internal = [];
-    const typeId = parseInt(binary.substring(6, 7));
     parsed.length += 1;
+    const typeId = parseInt(binary.substring(6, 7));
     
     if (typeId === 0) { // next 15 bits are the total length of the packets
       let remainingBits = parseInt(binary.substring(7, 7 + 15), 2);
@@ -59,8 +60,6 @@ const parsePacket = (binary) => {
         parsed.internal.push(packet);
         remainder = remainder.substring(packet.length);
       }
-
-      parsed.length += parsed.internal.reduce((sum, p) => sum + p.length, 0);
     } else { // 1
       const numberOfRemainingBits = parseInt(binary.substring(7, 7 + 11), 2);
       parsed.length += 11;
@@ -73,15 +72,15 @@ const parsePacket = (binary) => {
         remainder = remainder.substring(packet.length);
         n++;
       }
-
-      parsed.length += parsed.internal.reduce((sum, p) => sum + p.length, 0);
-      // console.log(parsed.internal);
     }
+
+    parsed.length += parsed.internal.reduce((sum, p) => sum + p.length, 0);
   }
 
   return parsed;
 };
 
+// recurse through my fuckin nonsense??
 const sumVersions = (packet) => {
   if (!packet.internal) {
     return packet.version;
@@ -118,6 +117,5 @@ const evaluate = (packet) => {
 
 
 const parsed = parsePacket(input);
-console.log(parsed);
 console.log('Part one:', sumVersions(parsed));
 console.log('Part two:', evaluate(parsed));
